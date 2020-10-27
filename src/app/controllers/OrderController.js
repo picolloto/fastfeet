@@ -141,7 +141,6 @@ class OrderController {
         });
       }
     }
-
     const order = await orderVerify.update(req.body);
 
     return res.json(order);
