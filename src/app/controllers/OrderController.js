@@ -85,18 +85,18 @@ class OrderController {
       }
     }
 
-    const {
-      id,
-      signature_id,
-      start_date,
-      end_date,
-      canceled_at,
-    } = await Order.create({
+    const createOrder = await Order.create({
       product,
       recipient_id,
       deliveryman_id,
       status: 'PENDENTE',
     });
+
+    if (!createOrder) {
+      return res
+        .status(400)
+        .json({ error: 'Sorry! Ocurred a problem...Try more later.' });
+    }
 
     // Envia um e-mail informando a disponibilidade da encomenda
     const { name, email } = await Deliveryman.findByPk(deliveryman_id);
@@ -127,20 +127,37 @@ class OrderController {
       return res.status(400).json({ error: 'Order does not exists' });
     }
 
-    // Verificar hora quando ele clicar no botao
-    if (req.body.start_date) {
-      const hourToday = new Date();
-      const date = format(hourToday, 'yyyy-MM-dd');
-      const startHour = parseISO(`${date}T08:00`);
-      const endHour = parseISO(`${date}T18:00`);
+    const hourToday = new Date();
+    const date = format(hourToday, 'yyyy-MM-dd');
+    const startHour = parseISO(`${date}T08:00`);
+    const endHour = parseISO(`${date}T18:00`);
 
+    const { deliveryman_id } = orderVerify;
+    const deliverymanDelivery = await Order.findAll({ where: deliveryman_id });
+
+    const countDelivery = deliverymanDelivery.map((row) => {
+      if (
+        row.start_date &&
+        isWithinInterval(row.start_date, { start: startHour, end: endHour })
+      ) {
+        return +1;
+      }
+      return 0;
+    });
+
+    if (req.body.start_date && countDelivery < 5) {
       if (!isWithinInterval(hourToday, { start: startHour, end: endHour })) {
         return res.status(401).json({
           error:
             'Você não pode retirar encomendas antes das 08:00 e depois das 18:00',
         });
       }
+    } else {
+      return res.status(500).json({
+        error: 'Você já atingiu o limite de entregas hoje, volte amanhã!',
+      });
     }
+
     const order = await orderVerify.update(req.body);
 
     return res.json(order);
@@ -157,7 +174,25 @@ class OrderController {
 
     const order = await orderDelete.update({ canceled_at: new Date() });
 
-    return res.json(order);
+    if (!order) {
+      return res
+        .status(400)
+        .json({ error: 'Sorry! Ocurred a problem...Try more later.' });
+    }
+
+    // Envia um e-mail informando a disponibilidade da encomenda
+    const { deliveryman_id } = orderDelete;
+    const { name, email } = await Deliveryman.findByPk(deliveryman_id);
+
+    const Responsemail = await Mail.sendMail({
+      to: `${name} <${email}>`,
+      subject: 'Nova solicitação de entrega!',
+      html: `Olá <b>${name}</b>, tudo bem? Devido à alguns problemas,
+        tivemos que cancelar a entrega deste pedido. Pedimos
+        desculpas pelo incoveniente!`,
+    });
+
+    return res.json(Responsemail);
   }
 }
 
