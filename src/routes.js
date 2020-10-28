@@ -4,7 +4,6 @@ import multerConfig from './config/multer';
 
 import authMiddleware from './app/middlewares/auth';
 
-// Importation from Controllers
 import SessionController from './app/controllers/SessionController';
 import RecipientController from './app/controllers/RecipientController';
 import FileController from './app/controllers/FileController';
@@ -21,9 +20,12 @@ routes.post('/sessions', SessionController.store);
 
 // Routes from Order to Deliverymans
 routes.get('/delivery/:id/deliveries', DeliveriesController.index);
-routes.put('/delivery/:id/orders/:order_id', DeliveriesController.update);
+routes.put('/delivery/:id/order/:order_id', DeliveriesController.update);
 
-routes.post('/orders/:id/problems/', ProblemsController.index);
+// Routes from Delivery problems
+routes.get('/delivery/problems/', ProblemsController.listProblem);
+routes.get('/delivery/:delivery_id/problems/', ProblemsController.index);
+routes.post('/delivery/:delivery_id/problems/', ProblemsController.store);
 
 // Routes from files
 routes.post('/files', upload.single('file'), FileController.store);
@@ -54,6 +56,6 @@ routes.put('/orders/:id', OrderController.update);
 routes.delete('/orders/:id', OrderController.delete);
 
 // Routes from Problems
-routes.get('/delivery/:id/problems');
+// routes.get('/delivery/:id/problems');
 
 export default routes;

@@ -1,6 +1,6 @@
 import Sequelize, { Model } from 'sequelize';
 
-class Problem extends Model {
+class Delivery_problems extends Model {
   static init(sequelize) {
     super.init(
       {
@@ -23,4 +23,4 @@ class Problem extends Model {
   }
 }
 
-export default Problem;
+export default Delivery_problems;
