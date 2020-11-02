@@ -8,22 +8,19 @@ class OrderDeliveryMail {
   }
 
   async handle({ data }) {
-    const { appointment } = data;
+    const { name, email, product, description, date } = data;
 
     await Mail.sendMail({
-      to: `${appointment.provider.name} <${appointment.provider.email}>`,
-      subject: 'Agendamento cancelado',
+      to: `${name} <${email}>`,
+      subject: 'Entrega cancelada',
       template: 'cancellation',
       context: {
-        provider: appointment.provider.name,
-        user: appointment.user.name,
-        date: format(
-          parseISO(appointment.date),
-          "'dia' dd 'de' MMMM', às' H:mm'h",
-          {
-            locale: pt,
-          }
-        ),
+        name,
+        product,
+        description,
+        date: format(parseISO(date), "'dia' dd 'de' MMMM', às' H:mm'h", {
+          locale: pt,
+        }),
       },
     });
   }

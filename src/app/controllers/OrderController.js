@@ -6,8 +6,10 @@ import Order from '../models/Order';
 import File from '../models/File';
 import Deliveryman from '../models/Deliveryman';
 import Recipient from '../models/Recipient';
+// import Delivery_problems from '../models/Delivery_problems';
+import OrderDeliveryMail from '../jobs/OrderDeliveryMail';
 
-import Mail from '../../lib/Mail';
+import Queue from '../../lib/Queue';
 
 class OrderController {
   async index(req, res) {
@@ -99,15 +101,9 @@ class OrderController {
     }
 
     // Envia um e-mail informando a disponibilidade da encomenda
-    const { name, email } = await Deliveryman.findByPk(deliveryman_id);
+    // const { name, email } = await Deliveryman.findByPk(deliveryman_id);
 
-    const Responsemail = await Mail.sendMail({
-      to: `${name} <${email}>`,
-      subject: 'Nova solicitação de entrega!',
-      html: `Olá ${name}, tudo bem? Temos uma nova encomenda para você!`,
-    });
-
-    return res.json(Responsemail);
+    return res.json(createOrder);
   }
 
   async update(req, res) {
@@ -168,6 +164,14 @@ class OrderController {
       where: { id: req.params.id, canceled_at: null },
     });
 
+    // let { description } = await Delivery_problems.findOne({
+    //   where: { delivery_id: req.params.id },
+    // });
+
+    // if (description === null) {
+    const description = 'Sentimos muito, mas a entrega teve que ser cancelada!';
+    // }
+
     if (!orderDelete) {
       return res.status(400).json({ error: 'Order does not exists' });
     }
@@ -180,19 +184,19 @@ class OrderController {
         .json({ error: 'Sorry! Ocurred a problem...Try more later.' });
     }
 
-    // Envia um e-mail informando a disponibilidade da encomenda
-    const { deliveryman_id } = orderDelete;
+    // Envia um e-mail informando o cancelamento da entrega
+    const { deliveryman_id, product } = orderDelete;
     const { name, email } = await Deliveryman.findByPk(deliveryman_id);
 
-    const Responsemail = await Mail.sendMail({
-      to: `${name} <${email}>`,
-      subject: 'Nova solicitação de entrega!',
-      html: `Olá <b>${name}</b>, tudo bem? Devido à alguns problemas,
-        tivemos que cancelar a entrega deste pedido. Pedimos
-        desculpas pelo incoveniente!`,
+    const emailSend = await Queue.add(OrderDeliveryMail.key, {
+      name,
+      email,
+      product,
+      description,
+      date: new Date(),
     });
 
-    return res.json(Responsemail);
+    return res.json(emailSend);
   }
 }
 
